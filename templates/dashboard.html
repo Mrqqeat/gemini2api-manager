@@ -168,10 +168,10 @@
                     </div>
                 </div>
                 
-                <div class="flex items-center gap-3 bg-purple-50 p-4 rounded-xl border border-purple-100 mt-2 cursor-pointer" onclick="document.getElementById('is_pro').click()">
-                    <input id="is_pro" name="is_pro" type="checkbox" class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 border-purple-200 cursor-pointer">
-                    <label for="is_pro" class="font-bold text-purple-700 text-sm cursor-pointer select-none">这是 Gemini Advanced (Pro) 账号</label>
-                </div>
+                <label class="flex items-center gap-3 bg-purple-50 p-4 rounded-xl border border-purple-100 mt-2 cursor-pointer select-none">
+				    <input id="is_pro" name="is_pro" type="checkbox" class="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 border-purple-200">
+				    <span class="font-bold text-purple-700 text-sm">这是 Gemini Advanced (Pro) 账号</span>
+				</label>
 
                 <div class="pt-6 flex justify-end gap-3 border-t border-slate-100 mt-6">
                     <button type="button" onclick="closeModal()" class="px-6 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-bold transition-colors">取消</button>
@@ -674,4 +674,5 @@
 			</div>`;
 		}    </script>
 </body>
+
 </html>
