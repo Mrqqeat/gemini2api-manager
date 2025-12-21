@@ -34,8 +34,8 @@
 确保你的电脑已安装 Python 3.9+，然后克隆本项目并安装依赖：
 
 ```bash
-git clone https://github.com/你的用户名/你的项目名.git
-cd 你的项目名
+git clone https://github.com/Mrqqeat/geminicli2api-manager.git
+cd geminicli2api-manager
 pip install -r requirements.txt
 ```
 
