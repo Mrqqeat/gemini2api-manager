@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>认证成功</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="flex items-center justify-center h-screen bg-slate-50">
+    <div class="text-center p-8 bg-white rounded-2xl shadow-xl">
+        <div class="text-emerald-500 text-5xl mb-4"><i class="fa-solid fa-circle-check"></i></div>
+        <h1 class="text-xl font-bold mb-2">认证成功！</h1>
+        <p class="text-slate-500 mb-6">账号: {{ email }} 已保存。</p>
+        <p class="text-sm text-slate-400 italic">窗口即将在 2 秒后关闭...</p>
+    </div>
+    <script>
+        setTimeout(() => { window.close(); }, 2000);
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</body>
+</html>

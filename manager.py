@@ -1,11 +1,4 @@
-import os
-import json
-import time
-import sys
-import subprocess
-import requests
-import uvicorn
-import asyncio
+import os, json, time, sys, subprocess, requests, uvicorn, asyncio
 from typing import List, Dict, Optional
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
@@ -13,127 +6,148 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleRequest
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
 from src.config import CLIENT_ID, CLIENT_SECRET
 
-# --- 配置 ---
 MANAGEMENT_PORT = 3000
 TOKENS_DIR = os.path.join(os.getcwd(), "tokens")
 CONFIG_FILE = "servers_config.json"
+REDIRECT_URI = f"http://localhost:{MANAGEMENT_PORT}/api/auth/callback"
+SCOPES = [
+    "https://www.googleapis.com/auth/cloud-platform",
+    "https://www.googleapis.com/auth/userinfo.email",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "openid"
+]
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-
-# 进程存储: { port: subprocess.Popen }
 running_processes: Dict[int, subprocess.Popen] = {}
 
-# --- 数据模型 ---
 class ServerConfig(BaseModel):
     id: Optional[str] = None
     name: str
     token_file: str
-    project_id: str             # 当前选中的 ID
-    project_ids: List[str] = [] # ID 列表历史
+    project_id: str
+    project_ids: List[dict] = []
     port: int
     password: str
     is_pro: bool = False
     status: str = "stopped"
 
-# --- 核心逻辑 ---
-def load_config() -> List[Dict]:
+def load_config():
     if not os.path.exists(CONFIG_FILE): return []
     try:
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f: return json.load(f)
     except: return []
 
-def save_config(configs: List[Dict]):
+def save_config(configs):
     with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
         json.dump(configs, f, indent=2)
 
-def get_token_files():
-    if not os.path.exists(TOKENS_DIR): os.makedirs(TOKENS_DIR)
-    return [f for f in os.listdir(TOKENS_DIR) if f.endswith('.json')]
-
 def fetch_account_data_sync(filename, project_id):
-    """同步获取单个账号额度"""
     file_path = os.path.join(TOKENS_DIR, filename)
     try:
-        if not os.path.exists(file_path): raise Exception(f"文件 {filename} 不存在")
-        
         with open(file_path, 'r') as f: token_data = json.load(f)
-        
-        # 补全 Client 信息
         for k, v in {"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET, "token_uri": "https://oauth2.googleapis.com/token"}.items():
             if k not in token_data: token_data[k] = v
-            
-        # 构造凭证，添加了 profile 和 openid 权限以获取昵称和头像
-        SCOPES = [
-            "https://www.googleapis.com/auth/cloud-platform",
-            "https://www.googleapis.com/auth/userinfo.email",
-            "https://www.googleapis.com/auth/userinfo.profile",
-            "openid"
-        ]
         creds = Credentials.from_authorized_user_info(token_data, SCOPES)
-        
         if creds.expired and creds.refresh_token:
-            try:
-                creds.refresh(GoogleRequest())
-                token_data.update(json.loads(creds.to_json()))
-                with open(file_path, 'w') as f: json.dump(token_data, f, indent=2)
-            except Exception as e: print(f"[{filename}] Refresh failed: {e}")
+            creds.refresh(GoogleRequest())
+            token_data.update(json.loads(creds.to_json()))
+            with open(file_path, 'w') as f: json.dump(token_data, f, indent=2)
 
         headers = {"Authorization": f"Bearer {creds.token}", "Content-Type": "application/json", "User-Agent": "GeminiCLI/v0.1.5"}
-        
-        # 并发请求 UserInfo 和 Quota
         with requests.Session() as s:
             s.headers.update(headers)
             user_resp = s.get("https://www.googleapis.com/oauth2/v2/userinfo", timeout=8)
             quota_resp = s.post("https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota", json={"project": project_id}, timeout=8)
-
-        if quota_resp.status_code != 200: raise Exception(f"API Error {quota_resp.status_code}")
+            tier_resp = s.post("https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist", json={}, timeout=8)
             
-        return {
-            "status": "success", 
-            "filename": filename, 
-            "user": user_resp.json(), 
-            "quotas": quota_resp.json().get("buckets", [])
-        }
+            # --- 核心判断逻辑修改 ---
+            tier_data = tier_resp.json()
+            # 1. 优先从 currentTier 获取状态
+            current_tier_id = tier_data.get("currentTier", {}).get("id")
+            # 2. 如果没有 currentTier，则查找 allowedTiers 里的默认项 (Pro账号特征)
+            if not current_tier_id:
+                for tier in tier_data.get("allowedTiers", []):
+                    if tier.get("isDefault"):
+                        current_tier_id = tier.get("id")
+                        break
+            
+            is_pro = (current_tier_id == "standard-tier")
+            # --- 修改结束 ---
+
+        return {"status": "success", "filename": filename, "user": user_resp.json(), "quotas": quota_resp.json().get("buckets", []), "is_pro": is_pro}
     except Exception as e:
         return {"status": "error", "filename": filename, "message": str(e)}
 
-# --- 路由 ---
 @app.get("/")
 async def index(request: Request):
     return templates.TemplateResponse("dashboard.html", {"request": request})
 
 @app.get("/api/tokens")
 async def list_tokens():
-    return get_token_files()
+    if not os.path.exists(TOKENS_DIR): os.makedirs(TOKENS_DIR)
+    return [f for f in os.listdir(TOKENS_DIR) if f.endswith('.json')]
+
+@app.get("/api/tokens/{filename}/projects")
+async def get_google_projects(filename: str):
+    file_path = os.path.join(TOKENS_DIR, filename)
+    try:
+        with open(file_path, 'r') as f: token_data = json.load(f)
+        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+        if creds.expired and creds.refresh_token:
+            creds.refresh(GoogleRequest())
+        
+        headers = {"Authorization": f"Bearer {creds.token}", "Content-Type": "application/json"}
+        # 获取内测ID
+        preview_id = None
+        try:
+            tier_res = requests.post("https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist", json={}, headers=headers, timeout=8).json()
+            preview_id = tier_res.get("cloudaicompanionProject")
+        except: pass
+
+        # 获取CRM项目列表
+        projects = []
+        try:
+            service = build('cloudresourcemanager', 'v1', credentials=creds)
+            res = service.projects().list().execute()
+            projects = [p['projectId'] for p in res.get('projects', []) if p.get('lifecycleState') == 'ACTIVE']
+        except: pass
+
+        results = []
+        if preview_id:
+            results.append({"id": preview_id, "name": f"{preview_id} (内测预览项目ID)"})
+        for pid in sorted(projects):
+            if pid != preview_id: results.append({"id": pid, "name": pid})
+        return results
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"message": str(e)})
 
 @app.get("/api/servers")
 async def get_servers():
     configs = load_config()
     for cfg in configs:
-        port = cfg['port']
-        # 检查进程存活状态
-        if port in running_processes:
-            if running_processes[port].poll() is None:
-                cfg['status'] = "running"
-            else:
-                del running_processes[port]
-                cfg['status'] = "stopped"
-        else:
-            cfg['status'] = "stopped"
+        p = cfg['port']
+        cfg['status'] = "running" if p in running_processes and running_processes[p].poll() is None else "stopped"
     return configs
 
 @app.post("/api/servers")
 async def add_server(config: ServerConfig):
     configs = load_config()
     config.id = str(int(time.time() * 1000))
+    # 强制检测 Pro 状态
+    res = fetch_account_data_sync(config.token_file, config.project_id)
     data = config.dict()
-    del data['status']
-    # 确保 project_id 在列表中
-    if data['project_id'] not in data['project_ids']:
-        data['project_ids'].append(data['project_id'])
+    data['is_pro'] = res.get("is_pro", False) if res.get("status") == "success" else False
+    
+    # 项目 ID 去重逻辑
+    existing_pids = [p['id'] if isinstance(p, dict) else p for p in data.get('project_ids', [])]
+    if data['project_id'] not in existing_pids:
+        data['project_ids'].append({"id": data['project_id'], "name": data['project_id']})
+        
     configs.append(data)
     save_config(configs)
     return {"status": "success"}
@@ -143,93 +157,89 @@ async def update_server(server_id: str, config: ServerConfig):
     configs = load_config()
     for i, cfg in enumerate(configs):
         if cfg['id'] == server_id:
-            updated_data = config.dict()
-            updated_data['id'] = server_id
-            updated_data['status'] = cfg.get('status', 'stopped')
-            if updated_data['project_id'] not in updated_data['project_ids']:
-                updated_data['project_ids'].append(updated_data['project_id'])
-            configs[i] = updated_data
+            data = config.dict()
+            data['id'] = server_id
+            
+            # 检查凭证文件是否发生变化
+            if cfg.get('token_file') != data['token_file']:
+                # 凭证变了，重新检测 Pro
+                res = fetch_account_data_sync(data['token_file'], data['project_id'])
+                data['is_pro'] = res.get("is_pro", False) if res.get("status") == "success" else False
+            else:
+                # 凭证没变，沿用之前的 Pro 标志
+                data['is_pro'] = cfg.get('is_pro', False)
+
+            # 项目 ID 去重逻辑
+            existing_pids = [p['id'] if isinstance(p, dict) else p for p in data.get('project_ids', [])]
+            if data['project_id'] not in existing_pids:
+                data['project_ids'].append({"id": data['project_id'], "name": data['project_id']})
+                
+            configs[i] = data
             save_config(configs)
             return {"status": "success"}
-    return JSONResponse(status_code=404, content={"message": "Not found"})
+    return JSONResponse(404, {"message": "Not found"})
 
 @app.delete("/api/servers/{server_id}")
 async def delete_server(server_id: str):
     configs = load_config()
     target = next((c for c in configs if c['id'] == server_id), None)
     if target and target['port'] in running_processes:
-        await stop_server(server_id)
+        proc = running_processes[target['port']]
+        proc.terminate()
+        del running_processes[target['port']]
     save_config([c for c in configs if c['id'] != server_id])
     return {"status": "success"}
 
-@app.post("/api/servers/reorder")
-async def reorder_servers(order: List[str]):
-    configs = load_config()
-    config_dict = {c['id']: c for c in configs}
-    new_configs = [config_dict[sid] for sid in order if sid in config_dict]
-    # 追加未在排序列表中的新配置
-    existing_ids = set(order)
-    new_configs.extend([c for c in configs if c['id'] not in existing_ids])
-    save_config(new_configs)
-    return {"status": "success"}
-
-# --- 进程管理 ---
 @app.post("/api/servers/{server_id}/start")
 async def start_server(server_id: str):
     configs = load_config()
-    target = next((c for c in configs if c['id'] == server_id), None)
-    if not target: return JSONResponse(404, {"message": "Server not found"})
-    
-    port = target['port']
-    if port in running_processes and running_processes[port].poll() is None:
-        return {"status": "already_running"}
-
+    t = next((c for c in configs if c['id'] == server_id), None)
+    if not t: return JSONResponse(404, {"message": "Not found"})
     env = os.environ.copy()
-    env.update({
-        "GOOGLE_APPLICATION_CREDENTIALS": os.path.join(TOKENS_DIR, target['token_file']),
-        "GOOGLE_CLOUD_PROJECT": target['project_id'],
-        "HOST": "0.0.0.0",
-        "PORT": str(port),
-        "GEMINI_AUTH_PASSWORD": target['password']
-    })
-
-    proc = subprocess.Popen([sys.executable, "run_proxy.py"], env=env, cwd=os.getcwd())
-    running_processes[port] = proc
-    return {"status": "started", "pid": proc.pid}
+    env.update({"GOOGLE_APPLICATION_CREDENTIALS": os.path.join(TOKENS_DIR, t['token_file']), "GOOGLE_CLOUD_PROJECT": t['project_id'], "PORT": str(t['port']), "GEMINI_AUTH_PASSWORD": t['password']})
+    proc = subprocess.Popen([sys.executable, "run_proxy.py"], env=env)
+    running_processes[t['port']] = proc
+    return {"status": "started"}
 
 @app.post("/api/servers/{server_id}/stop")
 async def stop_server(server_id: str):
     configs = load_config()
-    target = next((c for c in configs if c['id'] == server_id), None)
-    if not target: return JSONResponse(404, {"message": "Server not found"})
-    
-    port = target['port']
-    if port in running_processes:
-        proc = running_processes[port]
-        proc.terminate()
-        try:
-            proc.wait(timeout=2)
-        except:
-            proc.kill()
-        del running_processes[port]
-        return {"status": "stopped"}
-    return {"status": "not_running"}
+    t = next((c for c in configs if c['id'] == server_id), None)
+    if t and t['port'] in running_processes:
+        running_processes[t['port']].terminate()
+        del running_processes[t['port']]
+    return {"status": "stopped"}
 
-# --- 额度查询 (优化版: 单个查询) ---
 @app.get("/api/servers/{server_id}/quota")
 async def get_server_quota(server_id: str):
     configs = load_config()
-    target = next((c for c in configs if c['id'] == server_id), None)
-    if not target: return JSONResponse(404, {"message": "Server not found"})
-
-    loop = asyncio.get_running_loop()
-    # 在线程池中执行耗时操作
-    res = await loop.run_in_executor(None, fetch_account_data_sync, target['token_file'], target['project_id'])
-    
-    res['config_name'] = target['name']
-    res['is_pro'] = target.get('is_pro', False)
+    t = next((c for c in configs if c['id'] == server_id), None)
+    res = await asyncio.get_running_loop().run_in_executor(None, fetch_account_data_sync, t['token_file'], t['project_id'])
+    if res.get("status") == "success":
+        t['is_pro'] = res.get("is_pro", False)
+        save_config(configs)
+    res['config_name'] = t['name']
     return res
 
+@app.get("/api/auth/url")
+async def get_auth_url():
+    flow = Flow.from_client_config({"web": {"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET, "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token"}}, scopes=SCOPES)
+    flow.redirect_uri = REDIRECT_URI
+    url, _ = flow.authorization_url(access_type='offline', prompt='consent')
+    return {"url": url}
+
+@app.get("/api/auth/callback")
+async def auth_callback(code: str):
+    flow = Flow.from_client_config({"web": {"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET, "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token"}}, scopes=SCOPES)
+    flow.redirect_uri = REDIRECT_URI
+    flow.fetch_token(code=code)
+    creds = flow.credentials
+    user_info = build('oauth2', 'v2', credentials=creds).userinfo().get().execute()
+    email = user_info.get("email")
+    token_data = json.loads(creds.to_json())
+    token_data.update({"client_id": CLIENT_ID, "client_secret": CLIENT_SECRET})
+    with open(os.path.join(TOKENS_DIR, f"{email}.json"), 'w') as f: json.dump(token_data, f, indent=2)
+    return templates.TemplateResponse("auth_success.html", {"request": {}, "email": email})
+
 if __name__ == "__main__":
-    print(f"Manage Server running at http://localhost:{MANAGEMENT_PORT}")
     uvicorn.run(app, host="0.0.0.0", port=MANAGEMENT_PORT)
