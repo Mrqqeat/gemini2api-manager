@@ -1,12 +1,8 @@
-import platform
-from .config import CLI_VERSION
+import os, platform
+from .config import USER_AGENT
 
 def get_user_agent():
-    """Generate User-Agent string matching gemini-cli format."""
-    version = CLI_VERSION
-    system = platform.system()
-    arch = platform.machine()
-    return f"GeminiCLI/{version} ({system}; {arch})"
+    return USER_AGENT
 
 def get_platform_string():
     """Generate platform string matching gemini-cli format."""
@@ -30,8 +26,9 @@ def get_platform_string():
         return "PLATFORM_UNSPECIFIED"
 
 def get_client_metadata(project_id=None):
+    is_anti = os.getenv("PROXY_TYPE") == "antigravity"
     return {
-        "ideType": "IDE_UNSPECIFIED",
+        "ideType": "ANTIGRAVITY" if is_anti else "IDE_UNSPECIFIED",
         "platform": get_platform_string(),
         "pluginType": "GEMINI",
         "duetProject": project_id,

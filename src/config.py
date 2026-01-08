@@ -5,19 +5,40 @@ Centralizes all configuration to avoid duplication across modules.
 import os
 
 # API Endpoints
-CODE_ASSIST_ENDPOINT = "https://cloudcode-pa.googleapis.com"
-
-# Client Configuration
-CLI_VERSION = "0.1.5"  # Match current gemini-cli version
+IS_ANTIGRAVITY = os.getenv("PROXY_TYPE") == "antigravity"
+CODE_ASSIST_ENDPOINT = "https://daily-cloudcode-pa.sandbox.googleapis.com" if IS_ANTIGRAVITY else "https://cloudcode-pa.googleapis.com"
+# CODE_ASSIST_ENDPOINT = "https://cloudcode-pa.googleapis.com"
 
 # OAuth Configuration
-CLIENT_ID = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com"
-CLIENT_SECRET = "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"
-SCOPES = [
+# CLI 的配置
+CLI_VERSION = "0.1.5"  # Match current gemini-cli version
+CLI_CLIENT_ID = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com"
+CLI_CLIENT_SECRET = "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"
+CLI_SCOPES = [
     "https://www.googleapis.com/auth/cloud-platform",
+    "openid", 
     "https://www.googleapis.com/auth/userinfo.email",
     "https://www.googleapis.com/auth/userinfo.profile",
 ]
+
+# Antigravity 的配置
+ANTI_VERSION = "1.11.9"  # Match current gemini-antigravity version
+ANTI_CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
+ANTI_CLIENT_SECRET = "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"
+ANTI_SCOPES = [
+    'https://www.googleapis.com/auth/cloud-platform',
+    "openid", 
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'https://www.googleapis.com/auth/cclog',
+    'https://www.googleapis.com/auth/experimentsandconfigs'
+]
+
+CLIENT_ID = ANTI_CLIENT_ID if IS_ANTIGRAVITY else CLI_CLIENT_ID
+CLIENT_SECRET = ANTI_CLIENT_SECRET if IS_ANTIGRAVITY else CLI_CLIENT_SECRET
+SCOPES = ANTI_SCOPES if IS_ANTIGRAVITY else CLI_SCOPES
+# User Agent (Antigravity 校验 UA)
+USER_AGENT = "antigravity/1.11.3 windows/amd64" if IS_ANTIGRAVITY else f"GeminiCLI/{CLI_VERSION} (Windows; AMD64)"
 
 # File Paths
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -28,17 +49,17 @@ GEMINI_AUTH_PASSWORD = os.getenv("GEMINI_AUTH_PASSWORD", "123456")
 
 # Default Safety Settings for Google API
 DEFAULT_SAFETY_SETTINGS = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_CIVIC_INTEGRITY", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_IMAGE_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_IMAGE_HATE", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_UNSPECIFIED", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_JAILBREAK", "threshold": "BLOCK_NONE"}
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "OFF"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "OFF"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "OFF"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "OFF"},
+    {"category": "HARM_CATEGORY_CIVIC_INTEGRITY", "threshold": "OFF"},
+    {"category": "HARM_CATEGORY_IMAGE_DANGEROUS_CONTENT", "threshold": "OFF"},
+    {"category": "HARM_CATEGORY_IMAGE_HARASSMENT", "threshold": "OFF"},
+    {"category": "HARM_CATEGORY_IMAGE_HATE", "threshold": "OFF"},
+    {"category": "HARM_CATEGORY_IMAGE_SEXUALLY_EXPLICIT", "threshold": "OFF"},
+    {"category": "HARM_CATEGORY_UNSPECIFIED", "threshold": "OFF"},
+    {"category": "HARM_CATEGORY_JAILBREAK", "threshold": "OFF"}
 ]
 
 # Base Models (without search variants)
@@ -291,6 +312,8 @@ def get_thinking_budget(model_name):
         elif "gemini-3-pro" in base_model:
             return 45000
     else:
+        if "claude" in base_model:
+            return 32768
         # Default thinking budget for regular models
         return -1  # Default for all models
 

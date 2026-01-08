@@ -139,7 +139,7 @@ def get_credentials(allow_oauth_flow=True):
     """Loads credentials matching gemini-cli OAuth2 flow."""
     global credentials, credentials_from_env, user_project_id
     
-    if credentials and credentials.token:
+    if credentials and not credentials.expired and credentials.token:
         return credentials
     
     # Check for credentials in environment variable (JSON string)
@@ -270,6 +270,7 @@ def get_credentials(allow_oauth_flow=True):
                 
                 try:
                     creds_data = raw_creds_data.copy()
+                    current_scopes = creds_data.get("scopes", SCOPES)
                     
                     # Handle different credential formats
                     if "access_token" in creds_data and "token" not in creds_data:
@@ -305,7 +306,7 @@ def get_credentials(allow_oauth_flow=True):
                                 # Remove problematic expiry field - credentials will be treated as expired but still loadable
                                 del creds_data["expiry"]
                     
-                    credentials = Credentials.from_authorized_user_info(creds_data, SCOPES)
+                    credentials = Credentials.from_authorized_user_info(creds_data, current_scopes)
                     # Mark as environment credentials if GOOGLE_APPLICATION_CREDENTIALS was used
                     credentials_from_env = bool(os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
 
