@@ -127,7 +127,7 @@ def fetch_account_data_sync(filename, project_id, t_type="cli"):
         
         quotas = []
         if t_type == "antigravity":
-            q_res = s.post(f"{conf['base_url']}/v1internal:fetchAvailableModels", json={}, timeout=8).json()
+            q_res = s.post(f"{conf['base_url']}/v1internal:fetchAvailableModels", json={"project": project_id}, timeout=8).json()
             for mid, mdata in q_res.get('models', {}).items():
                 if 'quotaInfo' in mdata:
                     quotas.append({**mdata['quotaInfo'], "modelId": mid, "is_antigravity": True})
@@ -321,4 +321,5 @@ async def auth_callback(code: str, state: str = "cli"):
     return templates.TemplateResponse("auth_success.html", {"request": {}, "email": f"[{state.upper()}] {email}"})
 
 if __name__ == "__main__":
+
     uvicorn.run(app, host="0.0.0.0", port=MANAGEMENT_PORT)
