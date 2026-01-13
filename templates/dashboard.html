@@ -574,16 +574,20 @@
 				style: QUOTA_STYLE_CONFIG[sKey]
 			};
 		}
-
+		
 		function renderQuotaItem(group, isPro, type) {
 			const isMergedGroup = group.models.length > 1;
 			const firstModel = group.models[0];
-			const calc = getModelMeta(firstModel.modelId, firstModel.remainingFraction, isPro, type);
+			
+			// 如果属性不存在，则默认为 0
+			const fraction = firstModel.remainingFraction ?? 0;
+			
+			const calc = getModelMeta(firstModel.modelId, fraction, isPro, type);
 			const style = calc.style; 
 
 			let barTheme = 'bg-emerald-500', textTheme = 'text-emerald-700';
-			if (firstModel.remainingFraction < 0.2) { barTheme = 'bg-rose-500'; textTheme = 'text-rose-700'; }
-			else if (firstModel.remainingFraction < 0.5) { barTheme = 'bg-amber-500'; textTheme = 'text-amber-700'; }
+			if (fraction < 0.2) { barTheme = 'bg-rose-500'; textTheme = 'text-rose-700'; }
+			else if (fraction < 0.5) { barTheme = 'bg-amber-500'; textTheme = 'text-amber-700'; }
 			
 			let namesHtml = "";
 			if (isMergedGroup) {
@@ -612,12 +616,12 @@
 					</div>
 				</div>
 				<div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mb-2">
-					<div class="h-full rounded-full ${barTheme} transition-all duration-1000 shadow-sm" style="width: ${firstModel.remainingFraction*100}%"></div>
+					<div class="h-full rounded-full ${barTheme} transition-all duration-1000 shadow-sm" style="width: ${fraction*100}%"></div>
 				</div>
 				<div class="flex justify-between items-center">
 					<div class="flex items-center gap-2 bg-slate-100 px-2 py-0.5 rounded text-slate-500">
 						<span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">FRAC</span>
-						<code class="text-[13px] font-mono text-slate-600 font-bold select-all leading-tight">${firstModel.remainingFraction}</code>
+						<code class="text-[13px] font-mono text-slate-600 font-bold select-all leading-tight">${fraction}</code>
 					</div>
 					<div class="flex items-center gap-1.5 text-[13px] font-medium text-slate-500">
 						<i class="fa-regular fa-clock text-slate-400 text-xs"></i>
