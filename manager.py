@@ -39,7 +39,7 @@ TYPE_CONFIG = {
         "client_secret": ANTI_CLIENT_SECRET,
         "base_url": "https://daily-cloudcode-pa.sandbox.googleapis.com",
         # "base_url": "https://cloudcode-pa.googleapis.com",
-        "ua": "antigravity/1.11.9 windows/amd64",
+        "ua": "antigravity/1.15.8 windows/amd64",
         "dir": Path("tokens/antigravity"),
         "scopes": [
             'https://www.googleapis.com/auth/cloud-platform',
@@ -323,3 +323,4 @@ async def auth_callback(code: str, state: str = "cli"):
 if __name__ == "__main__":
 
     uvicorn.run(app, host="0.0.0.0", port=MANAGEMENT_PORT)
+
