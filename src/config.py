@@ -22,7 +22,7 @@ CLI_SCOPES = [
 ]
 
 # Antigravity 的配置
-ANTI_VERSION = "1.11.9"  # Match current gemini-antigravity version
+ANTI_VERSION = "1.15.8"  # Match current gemini-antigravity version
 ANTI_CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
 ANTI_CLIENT_SECRET = "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"
 ANTI_SCOPES = [
