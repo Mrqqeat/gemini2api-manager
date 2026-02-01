@@ -31,9 +31,9 @@
 ### 1. Gemini CLI 模式 (每日重置额度)
 | 模型分组 | 对应模型范围 | Pro 账号额度 | 非 Pro (内测项目) |
 | :--- | :--- | :--- | :--- |
-| **Flash 组** | 2.0-flash, 2.5-flash, 2.5-flash-Lite | 1500 次 | 1000 次 |
-| **3-Flash 组** | 3-Flash-Preview | 1500 次 | 1000 次 |
-| **Pro 组** | 2.5-Pro, 3-Pro-Preview | 250 次 | 100 次 |
+| **Flash 组** | 2.0-flash, 2.5-flash, 3-flash-preview | 1500 次 | 1500 次 |
+| **Lite 组** | 2.5-flash-lite | 1500 次 | 1500 次 |
+| **Pro 组** | 2.5-Pro, 3-Pro-Preview | 200 次 | 200 次 |
 
 > **注意**：
 > - **Pro 用户**：可使用自己账号下可用的谷歌云 Project ID。
