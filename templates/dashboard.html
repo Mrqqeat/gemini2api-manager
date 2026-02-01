@@ -197,8 +197,8 @@
 		// --- 全局配额配置表 ---
 		const MODEL_QUOTA_MAP = {
 			cli: {
-				standard: { flash: 1000, pro: 100, default: 0 },
-				pro:      { flash: 1500, pro: 250, default: 0 },
+				standard: { flash: 1500, pro: 200, default: 0 },
+				pro:      { flash: 1500, pro: 200, default: 0 },
 			},
 			antigravity: {
 				standard: { '2.5-flash': Infinity, '2.5-flash-lite': Infinity, '3-flash': Infinity, '3-pro': 75, '3-pro-image': 5, 'gpt-oss': 150, 'tab_flash_lite_preview': 150, claude: 150, 'rev19-uic3-1p': Infinity, default: 0 },
@@ -211,8 +211,8 @@
 		// --- 模型分组配置表 ---
 		const MODEL_GROUPS = {
 			cli: {
-				"2.5-flash": ["2.0-flash", "2.5-flash", "2.5-flash-lite"],
-				"3-flash": ["3-flash-preview"],
+			    "flash": ["2.0-flash", "2.5-flash", "3-flash-preview"],
+				"lite": ["2.5-flash-lite"],
 				"pro": ["2.5-pro", "3-pro-preview"],
 			},
 			antigravity: {
@@ -806,3 +806,4 @@
 	</script>
 </body>
 </html>
+
