@@ -22,7 +22,7 @@ CLI_SCOPES = [
 ]
 
 # Antigravity 的配置
-ANTI_VERSION = "1.15.8"  # Match current gemini-antigravity version
+ANTI_VERSION = "1.11.9"  # Match current gemini-antigravity version
 ANTI_CLIENT_ID = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"
 ANTI_CLIENT_SECRET = "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"
 ANTI_SCOPES = [
@@ -38,7 +38,7 @@ CLIENT_ID = ANTI_CLIENT_ID if IS_ANTIGRAVITY else CLI_CLIENT_ID
 CLIENT_SECRET = ANTI_CLIENT_SECRET if IS_ANTIGRAVITY else CLI_CLIENT_SECRET
 SCOPES = ANTI_SCOPES if IS_ANTIGRAVITY else CLI_SCOPES
 # User Agent (Antigravity 校验 UA)
-USER_AGENT = "antigravity/1.11.3 windows/amd64" if IS_ANTIGRAVITY else f"GeminiCLI/{CLI_VERSION} (Windows; AMD64)"
+USER_AGENT = "antigravity/1.15.8 windows/amd64" if IS_ANTIGRAVITY else f"GeminiCLI/{CLI_VERSION} (Windows; AMD64)"
 
 # File Paths
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -65,75 +65,10 @@ DEFAULT_SAFETY_SETTINGS = [
 # Base Models (without search variants)
 BASE_MODELS = [
     {
-        "name": "models/gemini-2.5-pro-preview-03-25",
-        "version": "001",
-        "displayName": "Gemini 2.5 Pro Preview 03-25",
-        "description": "Preview version of Gemini 2.5 Pro from May 6th",
-        "inputTokenLimit": 1048576,
-        "outputTokenLimit": 65535,
-        "supportedGenerationMethods": ["generateContent", "streamGenerateContent"],
-        "temperature": 1.0,
-        "maxTemperature": 2.0,
-        "topP": 0.95,
-        "topK": 64
-    },
-    {
-        "name": "models/gemini-2.5-pro-preview-05-06",
-        "version": "001",
-        "displayName": "Gemini 2.5 Pro Preview 05-06",
-        "description": "Preview version of Gemini 2.5 Pro from May 6th",
-        "inputTokenLimit": 1048576,
-        "outputTokenLimit": 65535,
-        "supportedGenerationMethods": ["generateContent", "streamGenerateContent"],
-        "temperature": 1.0,
-        "maxTemperature": 2.0,
-        "topP": 0.95,
-        "topK": 64
-    },
-    {
-        "name": "models/gemini-2.5-pro-preview-06-05",
-        "version": "001",
-        "displayName": "Gemini 2.5 Pro Preview 06-05",
-        "description": "Preview version of Gemini 2.5 Pro from June 5th",
-        "inputTokenLimit": 1048576,
-        "outputTokenLimit": 65535,
-        "supportedGenerationMethods": ["generateContent", "streamGenerateContent"],
-        "temperature": 1.0,
-        "maxTemperature": 2.0,
-        "topP": 0.95,
-        "topK": 64
-    },
-    {
         "name": "models/gemini-2.5-pro",
         "version": "001",
         "displayName": "Gemini 2.5 Pro",
         "description": "Advanced multimodal model with enhanced capabilities",
-        "inputTokenLimit": 1048576,
-        "outputTokenLimit": 65535,
-        "supportedGenerationMethods": ["generateContent", "streamGenerateContent"],
-        "temperature": 1.0,
-        "maxTemperature": 2.0,
-        "topP": 0.95,
-        "topK": 64
-    },
-    {
-        "name": "models/gemini-2.5-flash-preview-05-20",
-        "version": "001",
-        "displayName": "Gemini 2.5 Flash Preview 05-20",
-        "description": "Preview version of Gemini 2.5 Flash from May 20th",
-        "inputTokenLimit": 1048576,
-        "outputTokenLimit": 65535,
-        "supportedGenerationMethods": ["generateContent", "streamGenerateContent"],
-        "temperature": 1.0,
-        "maxTemperature": 2.0,
-        "topP": 0.95,
-        "topK": 64
-    },
-    {
-        "name": "models/gemini-2.5-flash-preview-04-17",
-        "version": "001",
-        "displayName": "Gemini 2.5 Flash Preview 04-17",
-        "description": "Preview version of Gemini 2.5 Flash from April 17th",
         "inputTokenLimit": 1048576,
         "outputTokenLimit": 65535,
         "supportedGenerationMethods": ["generateContent", "streamGenerateContent"],
@@ -156,23 +91,10 @@ BASE_MODELS = [
         "topK": 64
     },
     {
-        "name": "models/gemini-2.5-flash-image-preview",
-        "version": "001",
-        "displayName": "Gemini 2.5 Flash Image Preview",
-        "description": "Gemini 2.5 Flash Image Preview",
-        "inputTokenLimit": 32768,
-        "outputTokenLimit": 32768,
-        "supportedGenerationMethods": ["generateContent", "streamGenerateContent"],
-        "temperature": 1.0,
-        "maxTemperature": 2.0,
-        "topP": 0.95,
-        "topK": 64
-    },
-    {
         "name": "models/gemini-3-pro-preview",
         "version": "001",
-        "displayName": "Gemini 3.0 Pro Preview 11-2025",
-        "description": "Preview version of Gemini 3.0 Pro from November 2025",
+        "displayName": "Gemini 3.0 Pro Preview",
+        "description": "Preview version of Gemini 3.0 Pro from November 11-2025",
         "inputTokenLimit": 1048576,
         "outputTokenLimit": 65535,
         "supportedGenerationMethods": ["generateContent", "streamGenerateContent"],
@@ -193,7 +115,20 @@ BASE_MODELS = [
         "maxTemperature": 2.0,
         "topP": 0.95,
         "topK": 64
-    }
+    },
+    {
+        "name": "models/gemini-3.1-pro-preview",
+        "version": "001",
+        "displayName": "Gemini 3.1 Pro Preview",
+        "description": "Preview version of Gemini 3.1 Pro from November 02-2026",
+        "inputTokenLimit": 1048576,
+        "outputTokenLimit": 65535,
+        "supportedGenerationMethods": ["generateContent", "streamGenerateContent"],
+        "temperature": 1.0,
+        "maxTemperature": 2.0,
+        "topP": 0.95,
+        "topK": 64
+    },
 ]
 
 # Generate search variants for applicable models
@@ -220,7 +155,7 @@ def _generate_thinking_variants():
         # Only add thinking variants for models that support content generation
         # and contain "gemini-2.5-flash" or "gemini-2.5-pro" in their name
         if ("generateContent" in model["supportedGenerationMethods"] and
-            ("gemini-2.5-flash" in model["name"] or "gemini-2.5-pro" in model["name"])):
+            ("gemini-2.5-flash" in model["name"] or "gemini-2.5-pro" in model["name"] or "gemini-3" in model["name"])):
             
             # Add -nothinking variant
             nothinking_variant = model.copy()
@@ -245,7 +180,7 @@ def _generate_combined_variants():
         # Only add combined variants for models that support content generation
         # and contain "gemini-2.5-flash" or "gemini-2.5-pro" in their name
         if ("generateContent" in model["supportedGenerationMethods"] and
-            ("gemini-2.5-flash" in model["name"] or "gemini-2.5-pro" in model["name"])):
+            ("gemini-2.5-flash" in model["name"] or "gemini-2.5-pro" in model["name"] or "gemini-3" in model["name"])):
             
             # search + nothinking
             search_nothinking = model.copy()
@@ -304,12 +239,16 @@ def get_thinking_budget(model_name):
             return 128  # Limited thinking for pro
         elif "gemini-3-pro" in base_model:
             return 128  # Limited thinking for pro
+        elif "gemini-3.1-pro" in base_model:
+            return 128  # Limited thinking for pro
     elif is_maxthinking_model(model_name):
         if "gemini-2.5-flash" in base_model:
             return 24576
         elif "gemini-2.5-pro" in base_model:
             return 32768
         elif "gemini-3-pro" in base_model:
+            return 45000
+        elif "gemini-3.1-pro" in base_model:
             return 45000
     else:
         if "claude" in base_model:
@@ -323,7 +262,7 @@ def should_include_thoughts(model_name):
     if is_nothinking_model(model_name):
         # For nothinking mode, still include thoughts if it's a pro model
         base_model = get_base_model_name(model_name)
-        return "gemini-2.5-pro" in base_model or "gemini-3-pro" in base_model
+        return "gemini-2.5-pro" in base_model or "gemini-3-pro" in base_model or "gemini-3.1-pro" in base_model
     else:
         # For all other modes, include thoughts
         return True
