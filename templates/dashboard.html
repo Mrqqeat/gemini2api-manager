@@ -89,7 +89,11 @@
 						<input type="checkbox" id="merge-toggle" onchange="toggleMerge(this.checked)" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
 						<span class="text-sm font-bold text-slate-700 whitespace-nowrap">合并同组</span>
 					</label>
-					<button onclick="loadAllQuotas(true)" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-6 py-2.5 rounded-xl text-sm shadow-sm transition-transform active:scale-95 flex items-center gap-2.5 h-[46px]">
+					<label class="flex items-center gap-2 cursor-pointer bg-white border border-slate-200 px-4 py-2 rounded-xl shadow-sm hover:bg-slate-50 transition-colors h-[46px]">
+    					<input type="checkbox" id="hide-inactive-toggle" onchange="toggleHideInactive(this.checked)" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+    					<span class="text-sm font-bold text-slate-700 whitespace-nowrap">仅看运行</span>
+					</label>
+					<button onclick="loadAllQuotas(true)" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-5 py-2.5 rounded-xl text-sm shadow-sm transition-transform active:scale-95 flex items-center gap-2.5 h-[46px]">
 						<i class="fa-solid fa-rotate-right text-indigo-600"></i> 刷新
 					</button>
 				</div>
@@ -201,8 +205,8 @@
 				pro:      { flash: 1500, pro: 200, default: 0 },
 			},
 			antigravity: {
-				standard: { '2.5-flash': Infinity, '2.5-flash-lite': Infinity, '3-flash': Infinity, '3-pro': 75, '3-pro-image': 5, 'gpt-oss': 150, 'tab_flash_lite_preview': 150, claude: 150, 'rev19-uic3-1p': Infinity, default: 0 },
-				pro:      { '2.5-flash': 3000, '2.5-flash-lite': 5000, '3-flash': 400, '3-pro': 320, '3-pro-image': 20, 'gpt-oss': 150, 'tab_flash_lite_preview': 150, claude: 150, 'rev19-uic3-1p': 500, default: 0 },
+				standard: { '2.5-flash': Infinity, '2.5-flash-lite': Infinity, '3-flash': Infinity, '3-pro': 75, '3.1-pro': 75, '3-pro-image': 5, 'gpt-oss': 150, '_lite_preview': Infinity, claude: 150, 'rev19-uic3-1p': Infinity, default: 0 },
+				pro:      { '2.5-flash': 3000, '2.5-flash-lite': 5000, '3-flash': 400, '3-pro': 250, '3.1-pro': 250, '3-pro-image': 20, 'gpt-oss': 150, '_lite_preview': Infinity, claude: 150, 'rev19-uic3-1p': 500, default: 0 },
 			}
 		};
 		// --- 模型合并显示状态 ---
@@ -213,16 +217,16 @@
 			cli: {
 			    "flash": ["2.0-flash", "2.5-flash", "3-flash-preview"],
 				"lite": ["2.5-flash-lite"],
-				"pro": ["2.5-pro", "3-pro-preview"],
+				"pro": ["2.5-pro", "3-pro-preview", "3.1-pro-preview"],
 			},
 			antigravity: {
 				"2.5-flash": ["gemini-2.5-flash", "gemini-2.5-flash-thinking"],
 				"2.5-flash-lite": ["gemini-2.5-flash-lite"],
 				"3-flash": ["gemini-3-flash"],
-				"3-pro": ["gemini-3-pro-low", "gemini-3-pro-high"],
+				"3-pro": ["gemini-3-pro-low", "gemini-3-pro-high", "gemini-3.1-pro-low", "gemini-3.1-pro-high"],
 				"image": ["gemini-3-pro-image"],
-				"claude": ["claude-sonnet-4-5", "claude-sonnet-4-5-thinking", "claude-opus-4-5-thinking", "gpt-oss-120b-medium", "tab_flash_lite_preview"],
-				"rev19-uic3-1p": ["rev19-uic3-1p"],
+				"claude": ["claude-sonnet-4-6", "claude-sonnet-4-6-thinking", "claude-opus-4-6-thinking", "gpt-oss-120b-medium"],
+				"tab": ["tab_flash_lite_preview", "tab_jump_flash_lite_preview"],
 			}
 		};
 		// --- 额度显示样式配置表 ---
@@ -240,12 +244,14 @@
 		const $ = id => document.getElementById(id);
 		const $$ = sel => document.querySelectorAll(sel);
 		const toggleClass = (el, className, force) => el?.classList.toggle(className, force);
+		let isHideInactiveEnabled = localStorage.getItem('gemini_hide_inactive') === 'true';
 		// 页面加载后初始化开关状态
 		window.addEventListener('DOMContentLoaded', () => {
 			const toggle = $('merge-toggle');
 			if (toggle) toggle.checked = isMergeEnabled;
+			const hideToggle = $('hide-inactive-toggle');
+			if (hideToggle) hideToggle.checked = isHideInactiveEnabled;
 		});
-
 		let currentType = 'cli', currentServers = [], currentProjectIds = [], sortableInstance = null, editId = null;
 		let projectCache = JSON.parse(localStorage.getItem('gemini_project_cache') || '{}');
 
@@ -291,6 +297,19 @@
 					listContainer.classList.toggle('h-[430px]', !isMergeEnabled);
 				}
 			});
+		}
+		
+		function toggleHideInactive(enabled) {
+ 			isHideInactiveEnabled = enabled;
+    		localStorage.setItem('gemini_hide_inactive', enabled);
+    		// 遍历所有当前服务，根据状态切换对应卡片的显示/隐藏
+    		currentServers.forEach(s => {
+        		const card = $(`quota-card-${s.id}`);
+        		if (card) {
+            		const isHidden = enabled && s.status !== 'running';
+            		card.classList.toggle('hidden', isHidden);
+        		}
+    		});
 		}
 		
 		function handleTypeChange() {
@@ -653,15 +672,27 @@
 			if (force || isInit) { isRefreshing = true; if(btn){ btn.disabled = true; btn.innerHTML = `<i class="fa-solid fa-circle-notch animate-spin text-indigo-600"></i> 刷新中...`; } }
 			try {
 				if (isInit) {
-					grid.innerHTML = currentServers.map(s => `<div id="quota-card-${s.id}" class="animate-pulse bg-white rounded-2xl border p-6 h-64"></div>`).join('');
-					await Promise.all(currentServers.map((s, i) => new Promise(r => setTimeout(async () => { await fetchQuota(s.id); r(); }, i*100))));
+    				grid.innerHTML = currentServers.map(s => {
+        				const shouldHide = isHideInactiveEnabled && s.status !== 'running';
+        				return `<div id="quota-card-${s.id}" class="bg-white rounded-2xl border p-6 h-64 ${shouldHide ? 'hidden' : 'animate-pulse'}"></div>`;
+    				}).join('');
+    				await Promise.all(currentServers.map((s, i) => new Promise(r => setTimeout(async () => { await fetchQuota(s.id); r(); }, i*100))));
 				} else if (force) await Promise.all(currentServers.map(s => fetchQuota(s.id)));
 			} finally { if(force || isInit) { isRefreshing = false; if(btn){ btn.disabled = false; btn.innerHTML = oHTML; } } }
 		}
 
         async function fetchQuota(id) {
 			const card = $(`quota-card-${id}`);
-			if (card) { card.classList.add('animate-pulse'); card.innerHTML = `<div class="p-6 h-64"></div>`; }
+    		const sInfo = currentServers.find(s => s.id === id);
+    		const shouldHide = isHideInactiveEnabled && sInfo?.status !== 'running';
+
+    		if (card) {
+        		card.classList.toggle('hidden', shouldHide);
+        		if (!shouldHide) { // 只有不隐藏时才显示脉冲加载动画
+            		card.classList.add('animate-pulse');
+            		card.innerHTML = `<div class="p-6 h-64"></div>`;
+        		}
+    		}
 			try {
 				const res = await fetch(`/api/servers/${id}/quota`);
 				const data = await res.json();
@@ -731,7 +762,7 @@
 			const typeBadge = `<span class="inline-flex items-center rounded-md ${type==='antigravity'?'bg-purple-50 text-purple-700 ring-purple-700/10':'bg-blue-50 text-blue-700 ring-blue-700/10'} px-2 py-1 text-xs font-medium ring-1 ring-inset ml-2">${type.toUpperCase()}</span>`;
 			const displayGroups = getDisplayGroups(quotas, type, isMergeEnabled);
 			return `
-			<div id="quota-card-${sid}" class="card-enter bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden">
+			<div id="quota-card-${sid}" class="card-enter bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col overflow-hidden ${isHideInactiveEnabled && status !== 'running' ? 'hidden' : ''}">
 				<div class="flex items-center justify-between px-5 py-2 bg-slate-50/80 border-b border-slate-100">
 					<div class="flex items-center min-w-0"><i class="fa-solid fa-server text-[9px] text-slate-400 mr-1.5"></i><span class="text-[10px] font-black text-slate-500 uppercase truncate max-w-[100px]">${config_name}</span>${typeBadge}</div>
 					<div class="flex items-center gap-1.5 bg-white/60 px-2 py-0.5 rounded border border-slate-200/50 shrink-0 ml-2"><i class="fa-brands fa-google text-[9px] text-slate-400"></i><span class="text-[10px] font-bold font-mono text-slate-500 select-all">${sInfo?.project_id || 'Unknown'}</span></div>
@@ -806,4 +837,3 @@
 	</script>
 </body>
 </html>
-
